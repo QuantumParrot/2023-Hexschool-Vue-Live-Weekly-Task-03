@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>產品列表 - 2023 六角學院 Vue 直播班 - 第三週作業</title>
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css' integrity='sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==' crossorigin='anonymous'/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <template v-if="products.length && !isLoading">
+            <div class="container py-5">
+                <h2 class="mb-5">產品列表</h2>
+                <div class="d-flex justify-content-between mb-3">
+                    <button type="button" class="btn btn-secondary" @click="createProduct">建立新的產品</button>
+                </div>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                        <th width="5%">＃</th>
+                        <th width="10%">分類</th>
+                        <th width="25%">產品名稱</th>
+                        <th width="15%">
+                            <a class="text-decoration-none" href="#" @click.prevent="sort('origin_price')">
+                            <div class="d-flex align-items-center gap-2">
+                            原價
+                            <span class="material-icons">swap_vert</span>
+                            </div>
+                            </a>
+                        </th>
+                        <th width="15%">
+                            <a class="text-decoration-none" href="#" @click.prevent="sort('price')">
+                            <div class="d-flex align-items-center gap-2">
+                            售價
+                            <span class="material-icons">swap_vert</span>
+                            </div>
+                            </a>
+                        </th>
+                        <th class="text-center" width="10%">是否啟用</th>
+                        <th class="text-center" width="20%">編輯</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template v-for="(product, index) in sortProducts" :key="product.id">
+                            <tr class="align-middle">
+                                <td>{{ index + 1 }}</td>
+                                <td><span class="badge bg-secondary px-3">{{ product.category }}</span></td>
+                                <td><a href="#" @click.prevent="display = product">{{ product.title }}</a></td>
+                                <td>NT$ {{ product.origin_price }}</td>
+                                <td>NT$ {{ product.price }}</td>
+                                <td class="text-center" :class="!!product.is_enabled ? 'text-success' : 'text-danger'">
+                                {{ !!product.is_enabled ? '已啟用' : '未啟用' }}
+                                </td>
+                                <td>
+                                <div class="d-flex justify-content-center">
+                                <button type="button" class="btn btn-secondary me-2"
+                                        @click="editProduct(product)" :disabled="isLoading">編輯</button>
+                                <button type="button" class="btn btn-danger"
+                                        @click="removeProduct(product.id)" :disabled="isLoading">刪除</button>
+                                </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <template v-if="display.title">
+                    <div class="card overflow-hidden rounded-2">
+                        <div class="row">
+                            <div class="col-5">
+                                <div class="text-center">
+                                    <img :src="display.imageUrl" :alt="display.title" class="card-img">
+                                </div>
+                            </div>
+                            <div class="col-7 ps-0">
+                                <div class="p-4 h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                    <h3 class="fw-bold mb-3">{{ display.title }}</h3>
+                                    <p class="text-muted fs-6">
+                                    <span class="badge bg-secondary px-3 me-3">{{ display.category }}</span>
+                                    <span>{{ display.content }}</span>
+                                    </p>
+                                    <p>{{ display.description }}</p>
+                                    </div>
+                                    <div>
+                                    <p class="mb-0">NT$ 
+                                    <span class="text-muted text-decoration-line-through me-2">{{ display.origin_price }}</span>
+                                    <span>{{ display.price }} 元 ／ {{ display.unit }}</span>
+                                    </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+        <template v-else>
+            <loader></loader>
+        </template>
+        <!-- Modal -->
+        <div class="modal modal-lg fade" aria-hidden="true" tabindex="-1" ref="productModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="btn-close" aria-label="Close" @click="hideModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form ref="form">
+                            <!-- title -->
+                            <div class="mb-3">
+                                <label for="title" class="form-label">產品名稱</label>
+                                <input type="text" id="title" class="form-control"
+                                       v-model.trim="tempProduct.title">
+                            </div>
+                            <!-- description -->
+                            <div class="mb-3">
+                                <label for="description" class="form-label">產品描述</label>
+                                <textarea id="description" class="form-control" cols="30" rows="5"
+                                          v-model.trim="tempProduct.description"></textarea>
+                            </div>
+                            <!-- content -->
+                            <div class="mb-3">
+                                <label for="content" class="form-label">產品說明</label>
+                                <textarea id="content" class="form-control" cols="30" rows="5"
+                                          v-model.trim="tempProduct.content"></textarea>                             
+                            </div>
+                            <!-- category & unit -->
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label for="category" class="form-label">產品分類</label>
+                                    <input type="text" id="category" class="form-control"
+                                           v-model="tempProduct.category">
+                                </div>
+                                <div class="col-6">
+                                    <label for="unit" class="form-label">產品單位</label>
+                                    <input type="text" id="unit" class="form-control"
+                                           v-model="tempProduct.unit">
+                                </div>
+                            </div>
+                            <!-- price -->
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label for="origin_price" class="form-label">原價</label>
+                                    <input type="number" id="origin_price" class="form-control"
+                                           v-model.number="tempProduct.origin_price">
+                                </div>
+                                <div class="col-6">
+                                    <label for="price" class="form-label">售價</label>
+                                    <input type="number" id="price" class="form-control"
+                                           v-model.number="tempProduct.price">
+                                </div>
+                            </div>
+                            <!-- enabled -->
+                            <div class="mb-3">
+                                <input type="checkbox" id="is_enabled" class="form-check-input me-2"
+                                       v-model="tempProduct.is_enabled">
+                                <label for="is_enabled" class="form-check-label">是否啟用</label>
+                            </div>
+                            <!-- images -->
+                            <div class="mb-3">
+                                <label for="imageUrl" class="form-label">主圖網址</label>
+                                <input type="text" id="imageUrl" class="form-control mb-3"
+                                       v-model.trim="tempProduct.imageUrl">
+                                <template v-if="tempProduct.imageUrl">
+                                    <img class="w-100" :src="tempProduct.imageUrl" :alt="tempProduct.title">
+                                </template>
+                            </div>
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label for="image-1" class="form-label">圖片網址一</label>
+                                        <input type="text" id="image-1" class="form-control mb-3"
+                                               v-model="image1">
+                                        <template v-if="image1">
+                                            <img class="w-100" :src="image1" :alt="tempProduct.title">
+                                        </template>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="image-2" class="form-label">圖片網址二</label>
+                                        <input type="text" id="image-2" class="form-control mb-3"
+                                               v-model="image2">
+                                        <template v-if="image2">
+                                            <img class="w-100" :src="image2" :alt="tempProduct.title">
+                                        </template>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="image-3" class="form-label">圖片網址三</label>
+                                        <input type="text" id="image-3" class="form-control mb-3"
+                                               v-model="image3">
+                                        <template v-if="image3">
+                                            <img class="w-100" :src="image3" :alt="tempProduct.title">
+                                        </template>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="image-4" class="form-label">圖片網址四</label>
+                                        <input type="text" id="image-4" class="form-control mb-3"
+                                               v-model="image4">
+                                        <template v-if="image4">
+                                            <img class="w-100" :src="image4" :alt="tempProduct.title">
+                                        </template>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="image-5" class="form-label">圖片網址五</label>
+                                        <input type="text" id="image-5" class="form-control mb-3"
+                                               v-model="image5">
+                                        <template v-if="image5">
+                                            <img class="w-100" :src="image5" :alt="tempProduct.title">
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @click="saveProduct" :disabled="isLoading">儲存</button>
+                        <button type="button" class="btn btn-secondary" @click="hideModal" :disabled="isLoading">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.5/axios.min.js' integrity='sha512-TjBzDQIDnc6pWyeM1bhMnDxtWH0QpOXMcVooglXrali/Tj7W569/wd4E8EDjk1CwOAOPSJon1VfcEt1BI4xIrA==' crossorigin='anonymous'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js' integrity='sha512-X/YkDZyjTf4wyc2Vy16YGCPHwAY8rZJY+POgokZjQB2mhIRFJCckEGc6YyX9eNsPfn0PzThEuNs+uaomE5CO6A==' crossorigin='anonymous'></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="index.js" type="module"></script>
+</body>
+</html>
