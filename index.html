@@ -56,9 +56,11 @@
                                 <td>
                                 <div class="d-flex justify-content-center">
                                 <button type="button" class="btn btn-secondary me-2"
-                                        @click="editProduct(product)" :disabled="isLoading">編輯</button>
+                                        @click="editProduct(product)"
+                                        :disabled="isButtonDisabled">編輯</button>
                                 <button type="button" class="btn btn-danger"
-                                        @click="removeProduct(product.id)" :disabled="isLoading">刪除</button>
+                                        @click="confirmRemove(product)"
+                                        :disabled="isButtonDisabled">刪除</button>
                                 </div>
                                 </td>
                             </tr>
@@ -85,7 +87,7 @@
                                     </div>
                                     <div>
                                     <p class="mb-0">NT$ 
-                                    <span class="text-muted text-decoration-line-through me-2">{{ display.origin_price }}</span>
+                                    <span class="text-muted me-2" :class="{ 'text-decoration-line-through': display.origin_price !== display.price }">{{ display.origin_price }}</span>
                                     <span>{{ display.price }} 元 ／ {{ display.unit }}</span>
                                     </p>
                                     </div>
@@ -168,7 +170,7 @@
                                 </template>
                             </div>
                             <div class="mb-3">
-                                <div class="row">
+                                <div class="row g-3">
                                     <div class="col-6">
                                         <label for="image-1" class="form-label">圖片網址一</label>
                                         <input type="text" id="image-1" class="form-control mb-3"
@@ -214,8 +216,27 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" @click="saveProduct" :disabled="isLoading">儲存</button>
-                        <button type="button" class="btn btn-secondary" @click="hideModal" :disabled="isLoading">取消</button>
+                        <button type="button" class="btn btn-primary" @click="saveProduct" :disabled="isButtonDisabled">儲存</button>
+                        <button type="button" class="btn btn-secondary" @click="hideModal" :disabled="isButtonDisabled">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Confirm Modal -->
+        <div class="modal modal-lg fade" aria-hidden="true" tabindex="-1" ref="confirmModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="d-flex flex-column justify-content-between p-5">
+                        <div class="mb-4">
+                            <h3 class="mb-3">確定刪除商品【{{ this.tempProduct.title }}】？</h3>
+                            <p class="text-muted">注意：此操作無法復原！你要確定欸！</p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-danger me-3" @click="removeProduct"
+                                    :disabled="isButtonDisabled">確定</button>
+                            <button type="button" class="btn btn-secondary" @click="hideModal('remove')"
+                                    :disabled="isButtonDisabled">取消</button>
+                        </div>
                     </div>
                 </div>
             </div>

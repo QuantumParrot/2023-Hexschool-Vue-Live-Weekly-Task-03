@@ -12,6 +12,7 @@ const app = createApp({
             path: 'ataraxia',
 
             isLoading: false,
+            isButtonDisabled: false,
             
             products: [],
             
@@ -28,6 +29,7 @@ const app = createApp({
             display: {},
             
             modal: '',
+            confirmModal: '',
 
         }
 
@@ -49,6 +51,8 @@ const app = createApp({
 
     methods: {
 
+        // 驗證登入狀態
+
         checkToken() {
 
             const token = document.cookie.split('; ')
@@ -65,21 +69,24 @@ const app = createApp({
                 })
                 .catch(error => {
                     // console.log(error);
-                    alert(error.response.data.message);
+                    this.toastAlert(error.response.data.message, 'error');
                 })
 
             } else {
 
-                alert('請登入');
+                this.toastAlert('請登入', 'warning');
                 window.location.href="./login.html";
 
             }
 
         },
 
+        // 取得商品資料
+
         getProductData() {
 
             this.isLoading = true;
+            this.isButtonDisabled = true;
 
             axios.get(`${this.apiUrl}/api/${this.path}/admin/products/all`)
             .then(res => {
@@ -87,13 +94,17 @@ const app = createApp({
                 this.products = Object.values(res.data.products);
                 this.resetDisplay();
                 this.isLoading = false;
+                this.isButtonDisabled = false;
             })
             .catch(error => {
                 console.log(error);
                 this.isLoading = false;
+                this.isButtonDisabled = false;
             })
 
         },
+
+        // 排序
 
         sort(value) { 
             
@@ -101,6 +112,8 @@ const app = createApp({
             this.ascending = !this.ascending;
         
         },
+
+        // 建立商品
 
         createProduct() {
 
@@ -111,36 +124,28 @@ const app = createApp({
 
         },
 
-        removeProduct(id) {
-
-            this.isLoading = true;
-
-            axios.delete(`${this.apiUrl}/api/${this.path}/admin/product/${id}`)
-            .then(res => {
-                // console.log(res.data);
-                this.getProductData();
-            })
-            .catch(error => {
-                console.log(error);
-                this.isLoading = false;
-            })
-
-        },
+        // 編輯商品
 
         editProduct(product) {
+
+            this.resetTempProduct();
 
             // 打開 modal 並讓 tempProduct 指向 product 的深拷貝 ( 因為 imagesUrl 為陣列 )
             
             this.tempProduct = JSON.parse(JSON.stringify(product));
+            this.tempProduct.imagesUrl.forEach((item, idx) => { this[`image${idx+1}`] = item })
             this.showModal();
         
         },
+
+        // 儲存商品資料 ( 新增與編輯共用 )
 
         saveProduct() {
 
             // 如果有 id 屬性就是編輯，反之則是新增
 
             this.isLoading = true;
+            this.isButtonDisabled = true;
 
             if (this.tempProduct.id) {
 
@@ -148,35 +153,86 @@ const app = createApp({
                 .then(res => {
                     // console.log(res.data);
                     this.hideModal();
+                    this.toastAlert('成功編輯商品資料！', 'success');
                     this.getProductData();
                     this.resetTempProduct();
                 })
                 .catch(error => {
                     console.log(error);
                     this.isLoading = false;
+                    this.isButtonDisabled = false;
                 })
 
             } else {
 
-                const { image1, image2, image3, image4, image5 } = this;
+                if (Object.keys(this.tempProduct).some(key => key !== 'is_enabled' && !this.tempProduct[key])) {
 
-                this.tempProduct.imagesUrl = [ image1, image2, image3, image4, image5 ];
-
-                axios.post(`${this.apiUrl}/api/${this.path}/admin/product`, { data: this.tempProduct })
-                .then(res => {
-                    // console.log(res.data);
-                    this.hideModal();
-                    this.getProductData();
-                    this.resetTempProduct();
-                })
-                .catch(error => {
-                    console.log(error);
+                    this.toastAlert('欄位不得空白', 'warning');
                     this.isLoading = false;
-                });
+                    this.isButtonDisabled = false;
+
+                } else {
+
+                    const { image1, image2, image3, image4, image5 } = this;
+
+                    const imagesUrl = [ image1, image2, image3, image4, image5 ];
+
+                    this.tempProduct.imagesUrl = imagesUrl.filter(i => i);
+    
+                    axios.post(`${this.apiUrl}/api/${this.path}/admin/product`, { data: this.tempProduct })
+                    .then(res => {
+                        // console.log(res.data);
+                        this.hideModal();
+                        this.toastAlert('成功建立新商品！', 'success');
+                        this.getProductData();
+                        this.resetTempProduct();
+                    })
+                    .catch(error => {
+                        console.log(error);
+                        this.toastAlert(error.response.data.message, 'error');
+                        this.isLoading = false;
+                        this.isButtonDisabled = false;
+                    });
+
+                }
 
             }
 
         },
+
+        // 確認是否刪除
+
+        confirmRemove(product) {
+
+            this.tempProduct = product;
+            this.showModal('remove');
+
+        },
+
+        // 刪除商品
+
+        removeProduct() {
+
+            this.hideModal('remove');
+
+            this.isLoading = true;
+            this.isButtonDisabled = true;
+
+            axios.delete(`${this.apiUrl}/api/${this.path}/admin/product/${this.tempProduct.id}`)
+            .then(res => {
+                // console.log(res.data);
+                this.toastAlert('我們懷念它 ｡ﾟ(ﾟ´ω`ﾟ)ﾟ｡ ', 'success');
+                this.getProductData();
+            })
+            .catch(error => {
+                console.log(error);
+                this.isLoading = false;
+                this.isButtonDisabled = false;
+            })
+
+        },
+
+        // 清空展示
 
         resetDisplay() { this.display = {} },
 
@@ -202,15 +258,49 @@ const app = createApp({
 
         },
 
-        showModal() { this.modal.show() },
+        // 打開 Modal
 
-        hideModal() { this.modal.hide() },
+        showModal(type) {
+
+            if (type === 'remove') { this.confirmModal.show() } 
+            else { this.modal.show() }
+            
+        },
+
+        // 關閉 Modal
+
+        hideModal(type) { 
+            
+            if (type === 'remove') { this.confirmModal.hide() }
+            else { this.modal.hide() }
+        
+        },
+
+        // 提示訊息視窗 ( SweetAlert2 )
+
+        toastAlert(text, icon) {
+
+            Swal.fire({
+                position: 'center',
+                icon,
+                text,
+                showConfirmButton: false,
+                toast: true,
+                timer: 1500,
+            })
+
+        },
 
     },
 
     created() { this.checkToken(); },
 
-    mounted() { this.modal = new bootstrap.Modal(this.$refs.productModal); }
+    mounted() { 
+        
+        this.modal = new bootstrap.Modal(this.$refs.productModal);
+        this.confirmModal = new bootstrap.Modal(this.$refs.confirmModal);
+    
+    }
 
 });
 

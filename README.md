@@ -48,7 +48,7 @@
 
 - [x] 設定 Loading 畫面
 
-- [ ] 引入 SweetAlert2 提示套件
+- [x] 引入 SweetAlert2 提示套件
 
-- [ ] 將 modal 拆成元件
+- [ ] 將 modal 拆成元件 ( 下週作業 )
 
