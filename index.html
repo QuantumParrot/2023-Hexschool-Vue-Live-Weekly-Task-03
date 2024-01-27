@@ -14,7 +14,7 @@
             <div class="container py-5">
                 <h2 class="mb-5">產品列表</h2>
                 <div class="d-flex justify-content-between mb-3">
-                    <button type="button" class="btn btn-secondary" @click="createProduct">建立新的產品</button>
+                    <button type="button" class="btn btn-secondary" @click="openModal('create')">建立新的產品</button>
                 </div>
                 <table class="table table-hover">
                     <thead>
@@ -55,11 +55,9 @@
                                 </td>
                                 <td>
                                 <div class="d-flex justify-content-center">
-                                <button type="button" class="btn btn-secondary me-2"
-                                        @click="editProduct(product)"
+                                <button type="button" class="btn btn-secondary me-2" @click="openModal('edit', product)"
                                         :disabled="isButtonDisabled">編輯</button>
-                                <button type="button" class="btn btn-danger"
-                                        @click="confirmRemove(product)"
+                                <button type="button" class="btn btn-danger" @click="openModal('remove', product)"
                                         :disabled="isButtonDisabled">刪除</button>
                                 </div>
                                 </td>
@@ -103,121 +101,91 @@
         </template>
         <!-- Modal -->
         <div class="modal modal-lg fade" aria-hidden="true" tabindex="-1" ref="productModal">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="btn-close" aria-label="Close" @click="hideModal"></button>
                     </div>
                     <div class="modal-body">
                         <form ref="form">
-                            <!-- title -->
-                            <div class="mb-3">
-                                <label for="title" class="form-label">產品名稱</label>
-                                <input type="text" id="title" class="form-control"
-                                       v-model.trim="tempProduct.title">
-                            </div>
-                            <!-- description -->
-                            <div class="mb-3">
-                                <label for="description" class="form-label">產品描述</label>
-                                <textarea id="description" class="form-control" cols="30" rows="5"
-                                          v-model.trim="tempProduct.description"></textarea>
-                            </div>
-                            <!-- content -->
-                            <div class="mb-3">
-                                <label for="content" class="form-label">產品說明</label>
-                                <textarea id="content" class="form-control" cols="30" rows="5"
-                                          v-model.trim="tempProduct.content"></textarea>                             
-                            </div>
-                            <!-- category & unit -->
-                            <div class="row mb-3">
+                            <div class="row">
                                 <div class="col-6">
-                                    <label for="category" class="form-label">產品分類</label>
-                                    <input type="text" id="category" class="form-control"
-                                           v-model="tempProduct.category">
-                                </div>
-                                <div class="col-6">
-                                    <label for="unit" class="form-label">產品單位</label>
-                                    <input type="text" id="unit" class="form-control"
-                                           v-model="tempProduct.unit">
-                                </div>
-                            </div>
-                            <!-- price -->
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <label for="origin_price" class="form-label">原價</label>
-                                    <input type="number" id="origin_price" class="form-control"
-                                           v-model.number="tempProduct.origin_price">
-                                </div>
-                                <div class="col-6">
-                                    <label for="price" class="form-label">售價</label>
-                                    <input type="number" id="price" class="form-control"
-                                           v-model.number="tempProduct.price">
-                                </div>
-                            </div>
-                            <!-- enabled -->
-                            <div class="mb-3">
-                                <input type="checkbox" id="is_enabled" class="form-check-input me-2"
-                                       v-model="tempProduct.is_enabled">
-                                <label for="is_enabled" class="form-check-label">是否啟用</label>
-                            </div>
-                            <!-- images -->
-                            <div class="mb-3">
-                                <label for="imageUrl" class="form-label">主圖網址</label>
-                                <input type="text" id="imageUrl" class="form-control mb-3"
-                                       v-model.trim="tempProduct.imageUrl">
-                                <template v-if="tempProduct.imageUrl">
-                                    <img class="w-100" :src="tempProduct.imageUrl" :alt="tempProduct.title">
-                                </template>
-                            </div>
-                            <div class="mb-3">
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <label for="image-1" class="form-label">圖片網址一</label>
-                                        <input type="text" id="image-1" class="form-control mb-3"
-                                               v-model="image1">
-                                        <template v-if="image1">
-                                            <img class="w-100" :src="image1" :alt="tempProduct.title">
+                                    <!-- 主 -->
+                                    <div class="mb-3">
+                                        <label for="imageUrl" class="form-label">主圖網址</label>
+                                        <input type="text" id="imageUrl" class="form-control mb-3" v-model.trim="tempProduct.imageUrl">
+                                        <template v-if="tempProduct.imageUrl">
+                                            <img class="w-100" :src="tempProduct.imageUrl" :alt="tempProduct.title">
                                         </template>
                                     </div>
-                                    <div class="col-6">
-                                        <label for="image-2" class="form-label">圖片網址二</label>
-                                        <input type="text" id="image-2" class="form-control mb-3"
-                                               v-model="image2">
-                                        <template v-if="image2">
-                                            <img class="w-100" :src="image2" :alt="tempProduct.title">
-                                        </template>
+                                    <!-- 副 -->
+                                    <div class="mb-3" v-if="Array.isArray(tempProduct.imagesUrl)">
+                                        <p>副圖網址</p>
+                                        <div class="mb-3" v-for="(img, idx) in tempProduct.imagesUrl" :key="idx">
+                                            <input type="text" class="form-control mb-3" v-model.trim="tempProduct.imagesUrl[idx]">
+                                            <template v-if="tempProduct.imagesUrl[idx]">
+                                                <img class="w-100" :src="img" :alt="tempProduct.title">
+                                            </template>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <label for="image-3" class="form-label">圖片網址三</label>
-                                        <input type="text" id="image-3" class="form-control mb-3"
-                                               v-model="image3">
-                                        <template v-if="image3">
-                                            <img class="w-100" :src="image3" :alt="tempProduct.title">
-                                        </template>
+                                    <button type="button" class="w-100 btn btn-danger mb-3"
+                                            @click="tempProduct.imagesUrl.pop()" v-if="tempProduct.imagesUrl.length"
+                                            :disabled="isButtonDisabled">刪除圖片</button>
+                                    <button type="button" class="w-100 btn btn-secondary"
+                                            @click="tempProduct.imagesUrl.push('')" v-if="tempProduct.imagesUrl.length < 5"
+                                            :disabled="isButtonDisabled">新增圖片</button>
+                                </div>
+                                <div class="col-6">
+                                    <!-- 1 -->
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">產品名稱</label>
+                                        <input type="text" id="title" class="form-control" v-model.trim="tempProduct.title">
                                     </div>
-                                    <div class="col-6">
-                                        <label for="image-4" class="form-label">圖片網址四</label>
-                                        <input type="text" id="image-4" class="form-control mb-3"
-                                               v-model="image4">
-                                        <template v-if="image4">
-                                            <img class="w-100" :src="image4" :alt="tempProduct.title">
-                                        </template>
+                                    <!-- 2 -->
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">產品描述</label>
+                                        <textarea id="description" class="form-control" cols="30" rows="5" v-model.trim="tempProduct.description"></textarea>
                                     </div>
-                                    <div class="col-6">
-                                        <label for="image-5" class="form-label">圖片網址五</label>
-                                        <input type="text" id="image-5" class="form-control mb-3"
-                                               v-model="image5">
-                                        <template v-if="image5">
-                                            <img class="w-100" :src="image5" :alt="tempProduct.title">
-                                        </template>
+                                    <!-- 3 -->
+                                    <div class="mb-3">
+                                        <label for="content" class="form-label">產品說明</label>
+                                        <textarea id="content" class="form-control" cols="30" rows="5" v-model.trim="tempProduct.content"></textarea>                             
+                                    </div>
+                                    <!-- 4 -->
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <label for="category" class="form-label">產品分類</label>
+                                            <input type="text" id="category" class="form-control" v-model="tempProduct.category">
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="unit" class="form-label">產品單位</label>
+                                            <input type="text" id="unit" class="form-control" v-model="tempProduct.unit">
+                                        </div>
+                                    </div>
+                                    <!-- 5 -->
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <label for="origin_price" class="form-label">原價</label>
+                                            <input type="number" id="origin_price" class="form-control" v-model.number="tempProduct.origin_price">
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="price" class="form-label">售價</label>
+                                            <input type="number" id="price" class="form-control" v-model.number="tempProduct.price">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" @click="saveProduct" :disabled="isButtonDisabled">儲存</button>
+                    <div class="modal-footer justify-content-between">
+                        <div>
+                        <input type="checkbox" id="is_enabled" class="form-check-input me-2" v-model="tempProduct.is_enabled">
+                        <label for="is_enabled" class="form-check-label">是否啟用</label>
+                        </div>
+                        <div>
+                        <button type="button" class="btn btn-primary me-2" @click="saveProduct" :disabled="isButtonDisabled">儲存</button>
                         <button type="button" class="btn btn-secondary" @click="hideModal" :disabled="isButtonDisabled">取消</button>
+                        </div>
                     </div>
                 </div>
             </div>

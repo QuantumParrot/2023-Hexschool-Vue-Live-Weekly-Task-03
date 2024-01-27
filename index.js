@@ -19,17 +19,15 @@ const app = createApp({
             sortBy: 'origin_price',
             ascending: true,
             
-            tempProduct: {},
-            image1: '',
-            image2: '',
-            image3: '',
-            image4: '',
-            image5: '',
-
+            tempProduct: { imagesUrl: [] },
             display: {},
             
-            modal: '',
+            productModal: '',
             confirmModal: '',
+
+            // 用來決定更新商品時 axios 的串接方法
+
+            isNew: true,
 
         }
 
@@ -113,99 +111,95 @@ const app = createApp({
         
         },
 
-        // 建立商品
+        openModal(status, product) {
 
-        createProduct() {
+            if (status === 'create') {
 
-            // 打開 modal 並清空 tempProduct 的資料
+            // 新增
 
-            this.resetTempProduct();
-            this.showModal();
+            this.reset();
+
+            this.isNew = true;
+            this.productModal.show();
+
+            } else if (status === 'edit') {
+
+            // 編輯
+
+            this.tempProduct = { 
+                
+                ...product,
+                imagesUrl: Array.isArray(product.imagesUrl) ? [ ...product.imagesUrl ] : []
+            
+            };
+
+            this.isNew = false;
+            this.productModal.show();
+
+            } else if (status === 'remove') {
+
+            // 刪除
+
+            this.tempProduct = { 
+                
+                ...product,
+                imagesUrl: Array.isArray(product.imagesUrl) ? [ ...product.imagesUrl ] : []
+            
+            };
+
+            this.confirmModal.show();
+
+            }
 
         },
 
-        // 編輯商品
+        // 助教的範例中是使用 BS5 提供的 data-bs-dismiss 方法
 
-        editProduct(product) {
+        hideModal(status) {
 
-            this.resetTempProduct();
+            if (status === 'remove') { this.confirmModal.hide() } 
+            else { this.productModal.hide() }
 
-            // 打開 modal 並讓 tempProduct 指向 product 的深拷貝 ( 因為 imagesUrl 為陣列 )
-            
-            this.tempProduct = JSON.parse(JSON.stringify(product));
-            this.tempProduct.imagesUrl.forEach((item, idx) => { this[`image${idx+1}`] = item })
-            this.showModal();
-        
         },
 
         // 儲存商品資料 ( 新增與編輯共用 )
 
         saveProduct() {
 
-            // 如果有 id 屬性就是編輯，反之則是新增
+            if (Object.keys(this.tempProduct).some(key => key !== 'is_enabled' && !this.tempProduct[key])) {
 
-            this.isLoading = true;
-            this.isButtonDisabled = true;
-
-            if (this.tempProduct.id) {
-
-                axios.put(`${this.apiUrl}/api/${this.path}/admin/product/${this.tempProduct.id}`, { data: this.tempProduct })
-                .then(res => {
-                    // console.log(res.data);
-                    this.hideModal();
-                    this.toastAlert('成功編輯商品資料！', 'success');
-                    this.getProductData();
-                    this.resetTempProduct();
-                })
-                .catch(error => {
-                    console.log(error);
-                    this.isLoading = false;
-                    this.isButtonDisabled = false;
-                })
+            this.toastAlert('欄位不得空白', 'warning');
 
             } else {
 
-                if (Object.keys(this.tempProduct).some(key => key !== 'is_enabled' && !this.tempProduct[key])) {
+                this.isLoading = true;
+                this.isButtonDisabled = true;
 
-                    this.toastAlert('欄位不得空白', 'warning');
-                    this.isLoading = false;
-                    this.isButtonDisabled = false;
+                let method = 'post';
+                let url = `${this.apiUrl}/api/${this.path}/admin/product`;
 
-                } else {
+                if (!this.isNew) {
 
-                    const { image1, image2, image3, image4, image5 } = this;
-
-                    const imagesUrl = [ image1, image2, image3, image4, image5 ];
-
-                    this.tempProduct.imagesUrl = imagesUrl.filter(i => i);
-    
-                    axios.post(`${this.apiUrl}/api/${this.path}/admin/product`, { data: this.tempProduct })
-                    .then(res => {
-                        // console.log(res.data);
-                        this.hideModal();
-                        this.toastAlert('成功建立新商品！', 'success');
-                        this.getProductData();
-                        this.resetTempProduct();
-                    })
-                    .catch(error => {
-                        console.log(error);
-                        this.toastAlert(error.response.data.message, 'error');
-                        this.isLoading = false;
-                        this.isButtonDisabled = false;
-                    });
+                    method = 'put';
+                    url = `${this.apiUrl}/api/${this.path}/admin/product/${this.tempProduct.id}`;
 
                 }
 
+                axios[method](url, { data: this.tempProduct })
+                .then(res => {
+                    // console.log(res.data);
+                    this.hideModal();
+                    this.toastAlert(res.data.message, 'success');
+                    this.getProductData();
+                })
+                .catch(error => {
+                    console.log(error);
+                    this.toastAlert(error.response.data.message, 'error');
+                    this.isLoading = false;
+                    this.isButtonDisabled = false;
+                })
+
             }
-
-        },
-
-        // 確認是否刪除
-
-        confirmRemove(product) {
-
-            this.tempProduct = product;
-            this.showModal('remove');
 
         },
 
@@ -236,7 +230,7 @@ const app = createApp({
 
         resetDisplay() { this.display = {} },
 
-        resetTempProduct() {
+        reset() {
 
             this.tempProduct = {
                 title: '',
@@ -248,32 +242,9 @@ const app = createApp({
                 category: '',
                 imageUrl: '',
                 is_enabled: true,
+                imagesUrl: [],
             };
 
-            this.image1 = '';
-            this.image2 = '';
-            this.image3 = '';
-            this.image4 = '';
-            this.image5 = '';
-
-        },
-
-        // 打開 Modal
-
-        showModal(type) {
-
-            if (type === 'remove') { this.confirmModal.show() } 
-            else { this.modal.show() }
-            
-        },
-
-        // 關閉 Modal
-
-        hideModal(type) { 
-            
-            if (type === 'remove') { this.confirmModal.hide() }
-            else { this.modal.hide() }
-        
         },
 
         // 提示訊息視窗 ( SweetAlert2 )
@@ -297,7 +268,8 @@ const app = createApp({
 
     mounted() { 
         
-        this.modal = new bootstrap.Modal(this.$refs.productModal);
+        this.productModal = new bootstrap.Modal(this.$refs.productModal, { backdrop: 'static' });
+        
         this.confirmModal = new bootstrap.Modal(this.$refs.confirmModal);
     
     }
